@@ -2,20 +2,25 @@ import mysql.connector as p
 import numpy as np
 import matplotlib.pyplot as plt
 import statistics as st
-mydb=p.connect(host='localhost', user='root', passwd='5100')
+mydb=p.connect(host='localhost', user='root', passwd='rahulAB@123')
 myc=mydb.cursor()
 
 myc.execute("CREATE DATABASE IF NOT EXISTS PBA")
 myc.execute("USE PBA")
 
-def sign_in():
+print("\nwelcome to your own Personal Budget Analyzer!!!")
+
+myc.execute("CREATE TABLE IF NOT EXISTS budget(ano int, area varchar(25), budget int)")
+
+oo=input("\ndo you already have an account? (y/n) ")
+
+def sign_in(oo):
     import mysql.connector as p
-    mydb=p.connect(host='localhost', user='root', passwd='5100', database='PBA')
+    mydb=p.connect(host='localhost', user='root', passwd='rahulAB@123', database='PBA')
     myc=mydb.cursor()
-    oo=input("do you already have an account? (y/n) ")
     while oo=='n': #for sign up
         print("\nSIGN UP")
-        myc.execute("CREATE TABLE IF NOT EXISTS account(nuser varchar(50), psswd varchar(20), contact varchar(40), salary float)")
+        mydb.commit()
         use=input("create username: ")
         cntct=input("enter email id: ")
         psswd0=input("enter password: ")
@@ -25,7 +30,9 @@ def sign_in():
                 sal=int(input("enter monthly salary (this is for comparison purposes): "))
                 myc.execute("SELECT * FROM account")
                 rec=myc.fetchall()
-                if len(rec)>1:
+                if len(rec)==0:
+                    myc.execute("CREATE TABLE account(nuser varchar(50), psswd varchar(25), contact varchar(40), salary int)")
+                else:
                     myc.execute("DROP TABLE account")
                     myc.execute("CREATE TABLE account(nuser varchar(50), psswd varchar(25), contact varchar(40), salary int)")
                 q="INSERT INTO account VALUES('{}', '{}', '{}', {})".format(use, psswd0, cntct, sal)
@@ -38,10 +45,6 @@ def sign_in():
                 print("password confirmation was not correct...")
         else:
             print("password must be longer than 6 characters!")
-
-
-    
-
 
 def compchart(l1, l2, l3):
     x = np.array(l1)
@@ -57,45 +60,47 @@ def compchart(l1, l2, l3):
     plt.legend()
     plt.show()
 
+def log_in():
+    import mysql.connector as p
+    mydb=p.connect(host='localhost', user='root', passwd='rahulAB@123', database='PBA')
+    myc=mydb.cursor()
+    print("\nLOG IN")
+    myc.execute("SELECT nuser FROM account")
+    a=myc.fetchall()
+    use=a[0][0]
+    print("\nwelcome back", use, "!!!")
+    myc.execute("SELECT psswd FROM account")
+    a=myc.fetchall()
+    psswd=a[0][0]
+    while True:
+        psswd1=input("\nplease enter your password: ")
+        if psswd1!=psswd:
+            print("\ninvalid password")
+            q=input("do you wish to quit? (y/n)")
+            if q in 'yY':
+                print("exiting")
+                mydb.close()
+                break
+        else:
+            print("\nLOG IN SUCCESSFUL")
+            key=True
+            return key
+            break
+
+psswd1=sign_in(oo)
+
+try:
+    key=log_in()
     
-
-print("\nwelcome to your own Personal Budget Analyzer!!!")
-
-psswd1=sign_in()
-
-myc.execute("SHOW TABLES") #log in
-rec=myc.fetchall()
-for i in rec:
-    if 'account' in i:
-        print("\nLOG IN")
-        myc.execute("SELECT nuser FROM account")
-        a=myc.fetchone()
-        use=a[0]
-        print("\nwelcome back", use, "!!!")
-        myc.execute("SELECT psswd FROM account")
-        a=myc.fetchall()
-        psswd=a[0][0]
-        ss=True
-        while ss:
-            psswd1=input("\nplease enter your password: ")
-            if psswd1!=psswd:
-                print("\ninvalid password")
-                q=input("do you wish to quit? (y/n)")
-                if q in 'yY':
-                    print("exiting")
-                    mydb.close()
-                    break
-            else:
-                print("\nLOG IN SUCCESSFUL")
-                ss=False
-        break
-    if 'account' not in i:
-        print("you haven't signed up")
-        psswd1=sign_in()
+except:
+    print("\nyou haven't signed up")
+    oo='n'
+    psswd1=sign_in(oo)
+    key=log_in()
 
 ch=0
 #main menu, executes only if psswd inputed is right
-while psswd1==psswd:
+while key:
     print("\nMAIN MENU")
     print("1. Account & Budget Plan")
     print("2. Monthly Analysis")
@@ -113,15 +118,17 @@ while psswd1==psswd:
             print("5. Exit Menu")
             ch=int(input("Enter choice: "))
             if ch==1:
-                print("\narea\t\t budget")
                 myc.execute("SELECT area, budget FROM budget WHERE budget IS NOT NULL")
                 c=myc.rowcount
                 rec=myc.fetchall()
-                for i in rec:
-                    print(i[0], "\t", i[1])
+                if rec==[]:
+                    print("\nyou have not made a budget plan yet")
+                else:
+                    print("\narea\t\t budget")
+                    for i in rec:
+                        print(i[0], "\t", i[1])
             elif ch==2:
-                myc.execute("DROP TABLE budget")
-                myc.execute("CREATE TABLE budget(ano int, area varchar(25), budget int)")
+                myc.execute("TRUNCATE budget")
                 myc.execute("INSERT INTO budget(ano, area, budget) VALUES (1, 'groceries', NULL), (2, 'utilities', NULL), (3, 'medical', NULL), (4, 'electricity', NULL), (5, 'water', NULL), (6, 'education', NULL), (7, 'insurance', NULL), (8, 'transportation', NULL), (9, 'outings', NULL), (10, 'entertainment', NULL)")
                 mydb.commit()
                 ss=True
@@ -165,6 +172,9 @@ while psswd1==psswd:
                         o=input("\ndo you wish to continue? (y/n)")
             elif ch==4:
                 psswd0=input("please enter password: ")
+                myc.execute("SELECT * FROM account")
+                rec=myc.fetchall()
+                psswd=rec[0][1]
                 if psswd0==psswd:
                     o=0
                     while o!=6:#secondary sub-menu
@@ -178,22 +188,21 @@ while psswd1==psswd:
                         o=int(input("enter option: "))
                         if o==1:
                             myc.execute("SELECT * FROM account")
-                            rec=myc.fetchone()
+                            rec=myc.fetchall()
                             print("\nACCOUNT DETAILS")
-                            print("Username: ", rec[0])
-                            print("Password: ", rec[1])
-                            print("Your Email: ", rec[2])
-                            print("Your Salary: ", rec[3])
+                            print("Username: ", rec[0][0])
+                            print("Password: ", rec[0][1])
+                            print("Your Email: ", rec[0][2])
+                            print("Your Salary: ", rec[0][3])
                         elif o==2:
                             npsswd=input("enter new password: ")
                             if len(npsswd)>6:
                                 npsswd0=input("confirm new password: ")
                                 if npsswd0==npsswd:
-                                    q="UPDATE account SET psswd='{}' WHERE psswd='{}'".format('npsswd', 'psswd')
+                                    q="UPDATE account SET psswd='{}' WHERE psswd='{}'".format(npsswd, psswd)
                                     myc.execute(q)
                                     mydb.commit()
-                                    print("please log in again!")
-                                    mydb.close()
+                                    o=6
                                 else:
                                     print("the confirmation went wrong")
                             else:
@@ -222,30 +231,39 @@ while psswd1==psswd:
                 print("invlaid option, try again")
 
     elif c==2:
-        ss=True
-        print("\nMonthly Analysis")
-        dt=input("\nenter today's month and year: ")
-        for i in dt:
-            if i.isspace():
-                d=dt.split()
-                dt=d[0]+'_'+d[1]
-        myc.execute("DROP TABLE IF EXISTS {}".format(dt))
-        q="CREATE TABLE {}(ano int PRIMARY KEY, area varchar(25), expense int, budget int)".format(dt)
-        myc.execute(q)
-        print("\nPlease insert the values for each budgeted area below for the analysis!")
-        myc.execute("SELECT * FROM budget WHERE budget IS NOT NULL")
-        rec=myc.fetchall()
-        for i in rec:
-            e=int(input("\nEnter the expenses spent on "+i[1]+" this month: "))
-            q="INSERT INTO {} VALUES({}, '{}', {}, {})".format(dt, i[0], i[1], e, i[2])
+        ss=False
+        myc.execute("SHOW TABLES")
+        r=myc.fetchall()
+        for i in r:
+            if i==('budget',):
+                ss=True
+        if ss==True:
+            print("\nMonthly Analysis")
+            dt=input("\nenter today's month and year: ")
+            for i in dt:
+                if i.isspace():
+                    d=dt.split()
+                    dt=d[0]+'_'+d[1]
+            myc.execute("DROP TABLE IF EXISTS {}".format(dt))
+            q="CREATE TABLE {}(ano int PRIMARY KEY, area varchar(25), expense int, budget int)".format(dt)
             myc.execute(q)
-            mydb.commit()
-        print("\narea\t\t expenditure\t budget")
-        q="SELECT area, expense, budget FROM {}".format(dt)
-        myc.execute(q)
-        rec=myc.fetchall()
-        for i in rec:
-            print(i[0], '\t', i[1], '\t\t', i[2])
+            print("\nPlease insert the values for each budgeted area below for the analysis!")
+            myc.execute("SELECT * FROM budget WHERE budget IS NOT NULL")
+            rec=myc.fetchall()
+            for i in rec:
+                e=int(input("\nEnter the expenses spent on "+i[1]+" this month: "))
+                q="INSERT INTO {} VALUES({}, '{}', {}, {})".format(dt, i[0], i[1], e, i[2])
+                myc.execute(q)
+                mydb.commit()
+            print("\narea\t\t expenditure\t budget")
+            q="SELECT area, expense, budget FROM {}".format(dt)
+            myc.execute(q)
+            rec=myc.fetchall()
+            for i in rec:
+                print(i[0], '\t', i[1], '\t\t', i[2])
+        else:
+            print("you have not made a budget plan yet")
+
         while ss:#second sub-menu
             print("\nANALYSIS")
             print("1. Area-wise")
@@ -319,22 +337,21 @@ while psswd1==psswd:
                 print("invalid option")
 
     elif c==3:#third sub-menu
+        myc.execute("SHOW TABLES")
+        rec=myc.fetchall()
+        T={}
+        o=1
+        for i in rec:
+            if i[0] not in ('account', 'budget'):
+                T[o]=i[0]
+                o+=1
         ch=''
-        while ch!='3':
+        while T!={}:
             print("\nBUDGET HISTORY")
             print("1. Previous Reports")
             print("2. Average Expenditure Per Month")
             print("3. Exit")
             ch=input("please enter your choice: ")
-            myc.execute("SHOW TABLES")
-            rec=myc.fetchall()
-            T={}
-            o=1
-            for i in rec:
-                if i[0] not in ('account', 'budget'):
-                    T[o]=i[0]
-                    o+=1
-
             if ch=='1':
                 print("\nBUDGET HISTORY")
                 print("\nno. \tmonth")
@@ -432,10 +449,14 @@ while psswd1==psswd:
                     print(dt, '\t', v[0])
                 print("\nmoney spent so far: ", sum(L))
                 print("averge spent per month: ", st.mean(L))
-            
+            elif ch=='3':
+                print("\nexiting, report saved")
+                print("\nto see again, go to 'previous month's reports'")
+                T=''    
             else:
                 print("invalid option")
-         
+        if T=={}:
+            print("you have not used PBA before")
     elif c==4: #exiting program
         o='0'
         while o not in 'ynNY':
@@ -444,7 +465,7 @@ while psswd1==psswd:
                 print("exiting application")
                 mydb.close()
                 print("application exited")
-                psswd1=''
+                key=False
             elif o not in 'nN':
                 print('please input valid option')
 
